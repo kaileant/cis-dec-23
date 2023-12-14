@@ -9,3 +9,11 @@
         name:
           - apache2
           - php
+
+    - name: Copy file with owner and permissions
+      ansible.builtin.copy:
+        src: index.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: '0644'          

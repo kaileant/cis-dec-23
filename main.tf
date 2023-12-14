@@ -19,6 +19,24 @@ resource "google_compute_network" "vpc_network" {
   name = "terraform-network"
 }
 
+resource "google_compute_firewall" "firewall" {
+  name    = "terraform-firewall"
+  network = google_compute_network.vpc_network.name
+
+  allow {
+    protocol = "icmp"
+  }
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "80"]
+  }
+
+  target_tags = ["web"]
+  source_ranges = ["0.0.0.0/0"]
+}
+
+
 resource "google_compute_instance" "vm_instance" {
   name         = "terraform-instance"
   machine_type = "e2-micro"
@@ -38,6 +56,10 @@ resource "google_compute_instance" "vm_instance" {
   }
 }
 
-output "ip" {
+output "internal_ip" {
   value = google_compute_instance.vm_instance.network_interface.0.network_ip
+}
+
+output "external_ip" {
+value = google_compute_instance.vm_instance.network_interface.0.access_config.0.nat_ip
 }
