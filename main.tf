@@ -1,5 +1,5 @@
 variable "zone" {
-  default = "us-central1-c"
+  default = "us-central1-a"
 }
 
 terraform {
@@ -39,7 +39,7 @@ resource "google_compute_firewall" "firewall" {
 
 resource "google_compute_instance" "vm_instance" {
   name         = "terraform-instance"
-  machine_type = "e2-micro"
+  machine_type = "e2-medium"
   zone         = var.zone
   tags         = ["dev", "web"]
   boot_disk {
@@ -53,8 +53,63 @@ resource "google_compute_instance" "vm_instance" {
     network = google_compute_network.vpc_network.name
     access_config {
     }
-  }
+  }    
 }
+
+resource "google_service_account" "service_account" {
+  account_id   = "killua"
+  display_name = "hunter"
+  project = "hotdawg"
+}
+
+resource "google_compute_disk" "default" {
+  name  = "tform-disk-wwwdata"
+  type  = "pd-standard"
+  zone  = "us-central1-a"
+  image = "debian-11-bullseye-v20220719"
+  labels = {
+    environment = "dev"
+  }
+  physical_block_size_bytes = 4096
+}
+
+resource "google_storage_bucket" "backup-bucket" {
+  name          = "kt-bucket"
+  location      = "us"
+  project = "hotdawg"
+  force_destroy = true
+  uniform_bucket_level_access = true
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    condition {
+      with_state = "ARCHIVED"
+      num_newer_versions = 180
+    }
+    action {
+      type = "Delete"
+    }
+  }
+  
+  lifecycle_rule {
+    condition {
+      days_since_noncurrent_time = 180
+    }
+    action {
+      type = "Delete"
+    }
+  }
+}  
+
+resource "google_storage_bucket_iam_member" "backup-bucket" {
+ bucket = google_storage_bucket.backup-bucket.name
+ role  = "roles/storage.objectViewer"
+ member = "allUsers"
+}
+
 
 output "internal_ip" {
   value = google_compute_instance.vm_instance.network_interface.0.network_ip
